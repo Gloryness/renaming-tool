@@ -1,6 +1,6 @@
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import QRect, Qt
 from PyQt5.QtGui import QFont, QPalette, QBrush, QColor
-from PyQt5.QtWidgets import QDialog, QSizePolicy, QGridLayout, QLabel, QPushButton, QSpacerItem
+from PyQt5.QtWidgets import QDialog, QSizePolicy, QGridLayout, QLabel, QPushButton, QSpacerItem, QScrollArea, QWidget, QPlainTextEdit
 
 class ButtonAdd(QPushButton):
     def __init__(self, episode_number, type_, parent):
@@ -33,6 +33,7 @@ class AddEpisodeDialog(QDialog):
         super().__init__(parent)
 
         self.setModal(True)
+        self.setWindowFlags(Qt.WindowCloseButtonHint)
 
         self.obj = obj
         self.episodes = episode_count
@@ -95,6 +96,7 @@ class RemoveEpisodeDialog(QDialog):
         super().__init__(parent)
 
         self.setModal(True)
+        self.setWindowFlags(Qt.WindowCloseButtonHint)
 
         self.obj = obj
         self.episodes = episode_count
@@ -142,3 +144,40 @@ class RemoveEpisodeDialog(QDialog):
             self.gridLayout.addWidget(button, i - 1, 1, 1, 1)
 
         self.gridLayout_2.addLayout(self.gridLayout, 0, 0, 1, 1)
+
+class CompletionDialog(QDialog):
+    def __init__(self, renamed, description, parent=None):
+        super().__init__(parent)
+
+        self.renamed = renamed
+        self.description = description
+
+        self.setModal(True)
+        self.setWindowFlags(Qt.WindowCloseButtonHint)
+
+        self.setupUi()
+
+        self.label.setText(f"Successfully renamed {self.renamed} file{'s' if self.renamed != 1 else ''}.")
+        self.plainTextEdit.setPlainText(self.description)
+
+    def setupUi(self):
+        self.setWindowTitle("Operation completed")
+        self.setMinimumSize(200, 150)
+
+        self.gridLayout = QGridLayout(self)
+        self.scrollArea = QScrollArea(self)
+        self.scrollArea.setWidgetResizable(True)
+        self.scrollAreaWidgetContents = QWidget()
+        self.scrollAreaWidgetContents.setGeometry(QRect(0, 0, 380, 261))
+        self.gridLayout_2 = QGridLayout(self.scrollAreaWidgetContents)
+        self.plainTextEdit = QPlainTextEdit(self.scrollAreaWidgetContents)
+
+        self.gridLayout_2.addWidget(self.plainTextEdit, 0, 0, 1, 1)
+
+        self.scrollArea.setWidget(self.scrollAreaWidgetContents)
+
+        self.gridLayout.addWidget(self.scrollArea, 1, 0, 1, 1)
+
+        self.label = QLabel(self)
+
+        self.gridLayout.addWidget(self.label, 0, 0, 1, 1)

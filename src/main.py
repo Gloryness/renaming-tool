@@ -2,7 +2,7 @@ from PyQt5.QtCore import QMetaObject, QRect, Qt
 from PyQt5.QtGui import QFont, QPalette, QBrush, QColor, QPainter
 from PyQt5.QtWidgets import QMainWindow, QSizePolicy, QFormLayout, QWidget, QTabWidget, QGridLayout, QLabel, QScrollArea, QMessageBox, QSpinBox, QFileDialog, \
     QHBoxLayout, QLineEdit, QPushButton, QToolButton, QSpacerItem, QApplication, QRadioButton, QVBoxLayout, QStyle, QStyleOption, QFrame, QSplitter, QCheckBox
-from dialog import AddEpisodeDialog, RemoveEpisodeDialog
+from dialog import AddEpisodeDialog, RemoveEpisodeDialog, CompletionDialog
 from bs4 import BeautifulSoup
 import requests
 import sys
@@ -95,7 +95,7 @@ class WindowUI:
         self.win = main_window
 
     def setupUi(self):
-        self.win.setWindowTitle("Renaming Tool for TV Series")
+        self.win.setWindowTitle("Batch Renaming Tool for TV Series'")
         self.win.resize(930, 550)
         self.centralwidget = QWidget(self.win)
         self.gridLayout_2 = QGridLayout(self.centralwidget)
@@ -652,8 +652,40 @@ class Window(QMainWindow):
         self.ui.renameButton.clicked.connect(self.rename)
 
     def rename(self):
-        for (a, b) in self.to_rename.items():
-            print(a, "---->", b)
+        path = self.ui.folder_location.text() + "/"
+        detailed = []
+        for (file, new_file) in self.to_rename.items():
+            file = os.path.join(path, file)
+            new_file = os.path.join(path, new_file)
+            os.rename(file, new_file)
+            detailed.append(f"Old: {file}\nNew: {new_file}")
+
+        dialog = CompletionDialog(len(self.to_rename), "\n\n".join(detailed))
+        dialog.show()
+        dialog.exec_()
+
+        if len(self.should_probably_delete_these_later_aswell):
+            for item in self.should_probably_delete_these_later_aswell:
+                if hasattr(item, 'deleteLater'):
+                    item.deleteLater()
+                del item
+
+            self.should_probably_delete_these_later_aswell.clear()
+
+        self.clearUp()
+
+        self.episode_count = 0
+
+        self.ui.folder_location.clear()
+        self.to_rename.clear()
+        self.new_filenames.clear()
+        self.excluded.clear()
+        return
+
+    def onFocus(self, old, new):
+        if old is None:
+            if self.ui.tabWidget.currentIndex() == 1:
+                self.load_filenames(self.ui.folder_location.text(), format_load=True)
 
     def getFormatResult(self, dissected, s, e, title):
         result = self.format
@@ -680,30 +712,34 @@ class Window(QMainWindow):
 
         return result
 
+    def clearUp(self):
+        if len(self.should_probably_start_thinking_about_deleting_these):
+            self.ui.renameButton.setEnabled(False)
+            self.ui.files_to_rename_label.setText("0 files will be renamed.")
+            for item1, item2, in chunk(self.should_probably_start_thinking_about_deleting_these, 2):
+                try:
+                    self.ui.verticalLayout_5.removeWidget(item1)
+                except:
+                    pass
+
+                try:
+                    self.ui.verticalLayout_4.removeWidget(item2)
+                except:
+                    pass
+
+                for item in [item1, item2]:
+                    if hasattr(item, 'deleteLater'):
+                        item.deleteLater()
+                    if hasattr(item, 'setParent'):
+                        item.setParent(None)
+
+                del item
+
+            self.should_probably_start_thinking_about_deleting_these.clear()
+
     def load_filenames(self, path, format_load=False):
-        def clearUp():
-            if len(self.should_probably_start_thinking_about_deleting_these):
-                self.ui.renameButton.setEnabled(False)
-                self.ui.files_to_rename_label.setText("0 files will be renamed.")
-                for item1, item2, in chunk(self.should_probably_start_thinking_about_deleting_these, 2):
-                    try: self.ui.verticalLayout_5.removeWidget(item1)
-                    except: pass
-
-                    try: self.ui.verticalLayout_4.removeWidget(item2)
-                    except: pass
-
-                    for item in [item1, item2]:
-                        if hasattr(item, 'deleteLater'):
-                            item.deleteLater()
-                        if hasattr(item, 'setParent'):
-                            item.setParent(None)
-
-                    del item
-
-                self.should_probably_start_thinking_about_deleting_these.clear()
-
         if not path or not len(self.new_filenames):
-            clearUp()
+            self.clearUp()
             return
 
         path = path + "/"
@@ -711,7 +747,7 @@ class Window(QMainWindow):
         contents = list(filter(lambda k: k != "Thumbs.db" and os.path.isfile(path + k), os.listdir(path)))
 
         if not contents:
-            clearUp()
+            self.clearUp()
             return
 
         if contents != self.contents and format_load:
@@ -807,9 +843,11 @@ class Window(QMainWindow):
             self.ui.files_to_rename_label.setText(f"{files_to_rename} file{'s' if files_to_rename != 1 else ''} will be renamed.")
             if files_to_rename > 0:
                 self.ui.renameButton.setEnabled(True)
+            else:
+                self.ui.renameButton.setEnabled(False)
             return
 
-        clearUp()
+        self.clearUp()
 
         for index, file in enumerate(contents):
             try:
@@ -900,6 +938,8 @@ class Window(QMainWindow):
         self.ui.files_to_rename_label.setText(f"{files_to_rename} file{'s' if files_to_rename != 1 else ''} will be renamed.")
         if files_to_rename > 0:
             self.ui.renameButton.setEnabled(True)
+        else:
+            self.ui.renameButton.setEnabled(False)
 
     def nextTab(self):
         self.ui.tabWidget.setCurrentIndex(1)
@@ -955,7 +995,6 @@ class Window(QMainWindow):
 
         self.load_episodes(season_number)
 
-
     def load_episodes(self, season_number=1, season_load=False, format_load=False):
         episode_tables = self.website.find_all(attrs={'class': 'wikiepisodetable'})
 
@@ -980,6 +1019,9 @@ class Window(QMainWindow):
                 title = title_widget.text()
                 format_text = self.getFormatResult(dissected, season_number, index, title)
 
+                if ': ' in format_text:
+                    format_text = format_text.replace(": ", " - ")
+
                 for illegal_char in ["\\", "/", ":", "*", "?", '"', "<", ">", "|"]:
                     format_text = format_text.replace(illegal_char, '')
 
@@ -1001,12 +1043,17 @@ class Window(QMainWindow):
 
             self.should_probably_delete_these_later_aswell.clear()
 
+        episodes = list(filter(lambda episode: '"' in episode.find_all('td')[title_index].text, episodes))
+
         self.episode_count = len(episodes)
 
         for index, episode in enumerate(episodes, start=1):
             title = re.search('"[^"]+"', episode.find_all('td')[title_index].text)[0].replace('"', "")
             title = re.sub('\[[0-9]+]\Z', '', title)
             title = title.replace("†", "")
+
+            if ': ' in title:
+                title = title.replace(": ", " - ")
 
             for illegal_char in ["\\", "/", ":", "*", "?", '"', "<", ">", "|"]:
                 title = title.replace(illegal_char, '')
@@ -1198,10 +1245,14 @@ class Window(QMainWindow):
             self.ui.formLayout_2.setWidget(index - 1, QFormLayout.SpanningRole, widget)
             self.should_probably_delete_these_later.extend([title, description, spacer, vertical, horizontal, this_one, widget])
 
+def changedFocusSlot(old, now):
+    print(old, now)
+
 if __name__ == "__main__":
     app = QApplication(sys.argv)
 
     win = Window()
+    app.focusChanged.connect(win.onFocus)
     win.show()
 
     sys.exit(app.exec_())
