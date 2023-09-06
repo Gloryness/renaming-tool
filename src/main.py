@@ -1052,6 +1052,9 @@ class Window(QMainWindow):
             title = re.sub('\[[0-9]+]\Z', '', title)
             title = title.replace("†", "")
 
+            if title == "?":
+                title = "Question Mark"
+
             if ': ' in title:
                 title = title.replace(": ", " - ")
 

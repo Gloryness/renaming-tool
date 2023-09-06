@@ -162,7 +162,7 @@ class CompletionDialog(QDialog):
 
     def setupUi(self):
         self.setWindowTitle("Operation completed")
-        self.setMinimumSize(200, 150)
+        self.setMinimumSize(500, 350)
 
         self.gridLayout = QGridLayout(self)
         self.scrollArea = QScrollArea(self)
