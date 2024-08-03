@@ -1,6 +1,8 @@
 # renaming-tool
 A rather quite helpful renaming tool for batch renaming TV series episodes.
 
+[![Downloads](https://img.shields.io/github/downloads/Gloryness/renaming-tool/total)](https://github.com/Gloryness/renaming-tool/releases)
+
 # Preview
 
 This is the initial GUI that you'll see once you load the program.
