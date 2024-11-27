@@ -1005,7 +1005,11 @@ class Window(QMainWindow):
             self.ui.season_number.setMaximum(999)
             season = episode_tables[0]
         headers = [header.text if 'title' not in header.text.lower() else 'title' for header in season.find_next('tr')]
-        title_index = headers.index("title") - 1
+        no_name = False
+
+        try: title_index = headers.index("title") - 1
+        except ValueError: no_name = True
+
         episodes = season.find_all(attrs={'class': 'vevent'})
 
         dissected = re.findall("\{(sp|ep|s|e|title)(\+\d+|-\d+|)}", self.format)
@@ -1043,12 +1047,16 @@ class Window(QMainWindow):
 
             self.should_probably_delete_these_later_aswell.clear()
 
-        episodes = list(filter(lambda episode: '"' in episode.find_all('td')[title_index].text, episodes))
+        if no_name is False:
+            episodes = list(filter(lambda episode: '"' in episode.find_all('td')[title_index].text, episodes))
 
         self.episode_count = len(episodes)
 
         for index, episode in enumerate(episodes, start=1):
-            title = re.search('"[^"]+"', episode.find_all('td')[title_index].text)[0].replace('"', "")
+            if no_name is False:
+                title = re.search('"[^"]+"', episode.find_all('td')[title_index].text)[0].replace('"', "")
+            else:
+                title = f"Episode {index:02}"
             title = re.sub('\[[0-9]+]\Z', '', title)
             title = title.replace("†", "")
 
