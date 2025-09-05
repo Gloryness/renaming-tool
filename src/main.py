@@ -9,6 +9,8 @@ import sys
 import re
 import os
 
+USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:141.0) Gecko/20100101 Firefox/141.0"
+
 def chunk(iterable, n):
     """
     Yield n-sized chunks from iterable.
@@ -948,7 +950,7 @@ class Window(QMainWindow):
         data = self.result[index]
 
         try:
-            website = requests.get(f"https://en.wikipedia.org/wiki/{data['key']}")
+            website = requests.get(f"https://en.wikipedia.org/wiki/{data['key']}", headers={'User-Agent': USER_AGENT})
             status = website.status_code
             description = website.text
         except (requests.exceptions.RequestException, requests.exceptions.ConnectionError, requests.exceptions.ConnectTimeout) as exception:
@@ -1159,7 +1161,7 @@ class Window(QMainWindow):
         text = self.ui.search_wikipedia.text()
         try:
             req = requests.get(f'https://en.wikipedia.org/w/rest.php/v1/search/title?q={text}&limit=25',
-                               headers={'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/117.0'})
+                               headers={'User-Agent': USER_AGENT})
             status = req.status_code
             description = req.text
         except (requests.exceptions.RequestException, requests.exceptions.ConnectionError, requests.exceptions.ConnectTimeout) as exception:
